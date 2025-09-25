@@ -1,0 +1,35 @@
+# Nombre del flujo de trabajo que aparecerá en la pestaña "Actions" de GitHub
+name: CI - Build and Push Docker Image
+
+# Disparador: Este workflow se ejecutará cada vez que se haga un "push" a la rama "develop"
+on:
+  push:
+    branches: [ "develop" ]
+
+# Trabajos: Define una serie de tareas a ejecutar.
+jobs:
+  # Nombre del trabajo (puede ser cualquiera)
+  build-and-push:
+    # Máquina virtual: Usaremos la última versión de Ubuntu para ejecutar nuestro trabajo
+    runs-on: ubuntu-latest
+
+    # Pasos: Secuencia de acciones que se ejecutarán en el trabajo
+    steps:
+      # 1. Descarga el código del repositorio a la máquina virtual
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Inicia sesión en Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # Usa el secreto que creamos
+          password: ${{ secrets.DOCKERHUB_TOKEN }}    # Usa el token que creamos
+
+      # 3. Construye la imagen de Docker y la sube a Docker Hub
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .         # Usa el Dockerfile en la raíz del proyecto
+          push: true         # Le decimos que sí, que suba la imagen
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/mi-proyecto-cicd:latest # Nombra la imagen como "usuario/repo:latest"

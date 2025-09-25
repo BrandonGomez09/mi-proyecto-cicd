@@ -1,0 +1,12 @@
+# Ignorar las dependencias de Node, ya que se instalan dentro del contenedor
+node_modules
+
+# Ignorar el archivo de variables de entorno, NUNCA debe ir en la imagen
+.env
+
+# Ignorar archivos de registro (logs) de npm
+npm-debug.log
+
+# Ignorar el propio Dockerfile y otros archivos de configuración de Docker
+Dockerfile
+.dockerignore

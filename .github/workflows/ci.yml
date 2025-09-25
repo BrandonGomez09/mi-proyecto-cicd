@@ -1,0 +1,53 @@
+name: CI/CD - Build, Push and Deploy
+
+on:
+  push:
+    branches: [ "develop" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/mi-proyecto-cicd:latest
+
+  # --- NUEVO TRABAJO DE DESPLIEGUE ---
+  deploy:
+    # El despliegue necesita que el trabajo de construcción termine exitosamente
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USERNAME }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            # Jala la imagen más reciente desde Docker Hub
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mi-proyecto-cicd:latest
+            
+            # Detiene y elimina el contenedor antiguo si existe
+            docker stop mi-api-container || true
+            docker rm mi-api-container || true
+            
+            # Inicia el nuevo contenedor con las credenciales de la base de datos
+            docker run -d -p 3000:3000 --name mi-api-container \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/mi-proyecto-cicd:latest
